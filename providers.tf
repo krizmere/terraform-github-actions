@@ -8,11 +8,11 @@ terraform {
 
   # Update this block with the location of your terraform state file
   backend "azurerm" {
-    resource_group_name  = "rg-developer-dev"
     storage_account_name = "stcollsysnpeaue00"
     container_name       = "tfstate"
     key                  = "terraform.tfstate"
     use_oidc             = true
+    use_azuread_auth     = true
   }
 }
 
