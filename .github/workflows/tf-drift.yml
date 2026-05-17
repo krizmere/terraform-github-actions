@@ -1,7 +1,7 @@
 name: 'Terraform Configuration Drift Detection'
 
 on:
-  workflow_dispatch: 
+  workflow_dispatch:
   schedule:
     - cron: '41 3 * * *' # runs nightly at 3:41 am
 
@@ -11,7 +11,7 @@ permissions:
   contents: read
   issues: write
 
-#These environment variables are used by the terraform azure provider to setup OIDD authenticate. 
+#These environment variables are used by the terraform azure provider to setup OIDC authenticate.
 env:
   ARM_CLIENT_ID: "${{ secrets.AZURE_CLIENT_ID }}"
   ARM_SUBSCRIPTION_ID: "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
@@ -19,8 +19,13 @@ env:
 
 jobs:
   terraform-plan:
-    name: 'Terraform Plan'
+    name: 'Terraform Plan - ${{ matrix.environment }}'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        environment: [developer-dev, developer-test, developer-uat]
+      fail-fast: false
+    environment: ${{ matrix.environment }}
     env:
       #this is needed since we are running terraform with read-only permissions
       ARM_SKIP_PROVIDER_REGISTRATION: true
@@ -40,7 +45,12 @@ jobs:
 
     # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
     - name: Terraform Init
-      run: terraform init
+      run: |
+        terraform init \
+        -backend-config="resource_group_name=${{ secrets.BACKEND_RESOURCE_GROUP_NAME }}" \
+        -backend-config="storage_account_name=${{ secrets.BACKEND_STORAGE_ACCOUNT_NAME }}" \
+        -backend-config="container_name=${{ secrets.BACKEND_CONTAINER_NAME }}" \
+        -backend-config="key=${{ vars.BACKEND_KEY }}"
 
     # Generates an execution plan for Terraform
     # An exit code of 0 indicated no changes, 1 a terraform failure, 2 there are pending changes.
@@ -49,29 +59,29 @@ jobs:
       run: |
         export exitcode=0
         terraform plan -detailed-exitcode -no-color -out tfplan || export exitcode=$?
-        
+
         echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
-        
+
         if [ $exitcode -eq 1 ]; then
           echo Terraform Plan Failed!
           exit 1
-        else 
+        else
           exit 0
         fi
-        
-    # Save plan to artifacts  
+
+    # Save plan to artifacts
     - name: Publish Terraform Plan
       uses: actions/upload-artifact@v6
       with:
-        name: tfplan
+        name: tfplan-${{ matrix.environment }}
         path: tfplan
-        
+
     # Create string output of Terraform Plan
     - name: Create String Output
       id: tf-plan-string
       run: |
         TERRAFORM_PLAN=$(terraform show -no-color tfplan)
-        
+
         delimiter="$(openssl rand -hex 8)"
         echo "summary<<${delimiter}" >> $GITHUB_OUTPUT
         echo "## Terraform Plan Output" >> $GITHUB_OUTPUT
@@ -82,7 +92,7 @@ jobs:
         echo '```' >> $GITHUB_OUTPUT
         echo "</details>" >> $GITHUB_OUTPUT
         echo "${delimiter}" >> $GITHUB_OUTPUT
-        
+
     # Publish Terraform Plan as task summary
     - name: Publish Terraform Plan to Task Summary
       env:
@@ -100,9 +110,9 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const body = `${process.env.SUMMARY}`;
-            const title = 'Terraform Configuration Drift Detected';
+            const title = 'Terraform Configuration Drift Detected - ${{ matrix.environment }}';
             const creator = 'github-actions[bot]'
-          
+
             // Look to see if there is an existing drift issue
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -111,11 +121,11 @@ jobs:
               creator: creator,
               title: title
             })
-              
+
             if( issues.data.length > 0 ) {
               // We assume there shouldn't be more than 1 open issue, since we update any issue we find
               const issue = issues.data[0]
-              
+
               if ( issue.body == body ) {
                 console.log('Drift Detected: Found matching issue with duplicate content')
               } else {
@@ -137,7 +147,7 @@ jobs:
                 body: body
              })
             }
-            
+
     # If changes aren't detected, close any open drift issues
     - name: Publish Drift Report
       if: steps.tf-plan.outputs.exitcode == 0
@@ -145,9 +155,9 @@ jobs:
       with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const title = 'Terraform Configuration Drift Detected';
+            const title = 'Terraform Configuration Drift Detected - ${{ matrix.environment }}';
             const creator = 'github-actions[bot]'
-          
+
             // Look to see if there is an existing drift issue
             const issues = await github.rest.issues.listForRepo({
               owner: context.repo.owner,
@@ -156,19 +166,19 @@ jobs:
               creator: creator,
               title: title
             })
-              
+
             if( issues.data.length > 0 ) {
               const issue = issues.data[0]
-              
+
               github.rest.issues.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: issue.number,
                 state: 'closed'
               })
-            } 
-             
-    # Mark the workflow as failed if drift detected 
+            }
+
+    # Mark the workflow as failed if drift detected
     - name: Error on Failure
       if: steps.tf-plan.outputs.exitcode == 2
       run: exit 1

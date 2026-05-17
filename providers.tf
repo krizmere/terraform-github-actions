@@ -6,11 +6,10 @@ terraform {
     }
   }
 
-  # Update this block with the location of your terraform state file
   backend "azurerm" {
-    storage_account_name = "stcollsysnpeaue00"
-    container_name       = "tfstate"
-    key                  = "terraform.tfstate"
+    # storage_account_name = "" - Injected by backend-config
+    # container_name       = "" - Injected by backend-config
+    # key                  = "" - Injected by backend-config
     use_oidc             = true
     use_azuread_auth     = true
   }
