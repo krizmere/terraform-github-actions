@@ -5,10 +5,8 @@ terraform {
       version = ">= 3.7.0"
     }
   }
-
+  # Backend configuration is set in the workflow file using the -backend-config option of terraform init command
   backend "azurerm" {
-    use_oidc         = true
-    use_azuread_auth = true
   }
 }
 
