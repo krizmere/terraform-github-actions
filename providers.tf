@@ -7,9 +7,6 @@ terraform {
   }
 
   backend "azurerm" {
-    # storage_account_name = "" - Injected by backend-config
-    # container_name       = "" - Injected by backend-config
-    # key                  = "" - Injected by backend-config
     use_oidc             = true
     use_azuread_auth     = true
   }

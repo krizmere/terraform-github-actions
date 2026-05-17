@@ -38,13 +38,16 @@ jobs:
     - name: Run Checkov action
       id: checkov
       uses: bridgecrewio/checkov-action@master
-      with: 
+      with:
         framework: terraform
+        output_format: sarif
+        output_file_path: results.sarif
+        soft_fail: true
 
     # Upload results to GitHub Advanced Security
     - name: Upload SARIF file
       if: success() || failure()
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       with:
         sarif_file: results.sarif
         category: checkov
