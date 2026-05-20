@@ -7,6 +7,8 @@ terraform {
   }
   # Backend configuration is set in the workflow file using the -backend-config option of terraform init command
   backend "azurerm" {
+    use_azuread_auth = true
+    use_oidc         = true
   }
 }
 
