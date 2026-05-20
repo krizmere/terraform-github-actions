@@ -63,7 +63,7 @@ jobs:
       id: tf-plan
       run: |
         export exitcode=0
-        terraform plan -detailed-exitcode -no-color -out tfplan || export exitcode=$?
+        terraform plan -var-file="env/${{ matrix.environment }}.tfvars" -detailed-exitcode -no-color -out tfplan || export exitcode=$?
 
         echo "exitcode=$exitcode" >> $GITHUB_OUTPUT
         
@@ -76,6 +76,7 @@ jobs:
         
     # Create string output of Terraform Plan using heredoc syntax to preserve formatting and allow for markdown in the output
     - name: Create String Output
+      if: github.ref != 'refs/heads/main'
       id: tf-plan-string
       run: |
         TERRAFORM_PLAN=$(terraform show -no-color tfplan)
@@ -93,6 +94,7 @@ jobs:
         
     # Publish Terraform Plan as task summary
     - name: Publish Terraform Plan to Task Summary
+      if: github.ref != 'refs/heads/main'
       env:
         SUMMARY: ${{ steps.tf-plan-string.outputs.summary }}
       run: |
