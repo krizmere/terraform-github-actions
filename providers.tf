@@ -7,6 +7,10 @@ terraform {
   }
   # Backend configuration is set in the workflow file using the -backend-config option of terraform init command
   backend "azurerm" {
+    storage_account_name = "stcollsysnpeaue00"
+    container_name       = "tfstate"
+    key                  = "dev.terraform.tfstate"
+    resource_group_name  = "rg-developer-dev"
     use_azuread_auth = true
     use_oidc         = true
   }
@@ -14,8 +18,5 @@ terraform {
 
 provider "azurerm" {
   features {}
-  default_tags {
-    tags = var.tags
-  }
   use_oidc = true
 }
