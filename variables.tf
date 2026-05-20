@@ -1,5 +1,15 @@
-variable "resource_group_name" {}
-variable "location" {}
 variable "tags" {
-  type = map(string)
+  description = "Tags for all Azure resources."
+  type        = map(string)
+}
+
+variable "location" {
+  description = "Azure region for all resources."
+  type        = string
+  default     = "australiaeast"
+}
+
+variable "environment" {
+  description = "Target environment for deployment, used in naming convention of resources and to select appropriate variable files."
+  type        = string
 }
